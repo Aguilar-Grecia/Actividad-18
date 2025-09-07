@@ -9,6 +9,7 @@ class Participante:
 class BandaEscolar(Participante):
     _categorias_validas = ["Primaria", "Básico", "Diversificado"]
     _criterios_evaluacion = ["Ritmo", "Uniformidad", "Coreografía", "Alineación", "Puntualidad"]
+
     def __init__(self, nombre, institucion, categoria):
         super().__init__(nombre, institucion)
         self._categoria = None
@@ -37,7 +38,9 @@ class BandaEscolar(Participante):
         return sum(self._puntajes.values()) if self._puntajes else 0
 
     def promedio(self):
-        return self.total / len(BandaEscolar._criterios) if self._puntajes else 0
+        if not self._puntajes:
+            return 0
+        return self.total / 5
 
     def mostrar_info(self):
         info = f"Banda: {self.nombre} | Instituación: {self.institucion} | Categoría: {self._categoria} "
@@ -45,14 +48,57 @@ class BandaEscolar(Participante):
             info  += f" | Total: {self.total}"
         return info
 
-    def texto(self):
-        return f"{self.nombre} | {self.institucion} | {self._categoria} | {self._puntajes}"
+    def linea_archivo(self):
+        if self._puntajes:
+            r = self._puntajes.get("ritmo", 0)
+            u = self._puntajes.get("uniformidad", 0)
+            c = self._puntajes.get("coreografia", 0)
+            a = self._puntajes.get("alineacion", 0)
+            p = self._puntajes.get("puntualidad", 0)
+            return f"{self.nombre}: {self.institucion}: {self._categoria}:{r}:{u}:{c}:{a}:{p}"
+        else:
+            return f"{self.nombre}: {self.institucion}: {self._categoria}"
 
 class Concurso:
-    def __init__(self, nombre, fecha):
+    def __init__(self, nombre, fecha, archivo = "banda.txt"):
         self.nombre = nombre
         self.fecha = fecha
+        self.archivo = archivo
         self.bandas = {}
+        self.cargar_bandas()
+
+    def cargar_bandas(self):
+        try:
+            with open(self.archivo, "r", encodig="udf-8") as f:
+                for liena in f:
+                    linea = linea.strip()
+                    if not linea:
+                        continue
+                    partes = linea.split(":")
+                    if len(partes) < 3:
+                        continue
+                    nombre = partes[0]
+                    institucion = partes[1]
+                    categoria = partes[2]
+                    banda = BandaEscolar(nombre, institucion, categoria)
+                    if len(partes) >= 8:
+                        try:
+                            rimtmo = int(partes[3])
+                            uniformidad = int(partes[4])
+                            coreografia = int(partes[5])
+                            alineacion = int(partes[6])
+                            puntualidad = int(partes[7])
+                            puntajes = (
+                                "ritmo": ritmo,
+                                "uniformidad": uniformidad,
+                                "coreografia": coreografia,
+                                "alineacion": alineacion,
+                                "puntualidad": puntualidad,
+                            )
+                            banda.registrar_puntaje(puntajes)
+                        except ValueError:
+
+
 
     def inscribir_banda(self, banda: BandaEscolar):
         if banda.nombre in self.bandas:
