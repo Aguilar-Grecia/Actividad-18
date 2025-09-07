@@ -1,3 +1,5 @@
+import tkinter as tk
+
 class Participante:
     def __init__(self, nombre, institucion):
         self.nombre = nombre
@@ -50,15 +52,9 @@ class BandaEscolar(Participante):
 
     def linea_archivo(self):
         if self._puntajes:
-            r = self._puntajes.get("ritmo", 0)
-            u = self._puntajes.get("uniformidad", 0)
-            c = self._puntajes.get("coreografia", 0)
-            a = self._puntajes.get("alineacion", 0)
-            p = self._puntajes.get("puntualidad", 0)
-            return f"{self.nombre}: {self.institucion}: {self._categoria}:{r}:{u}:{c}:{a}:{p}"
+            return f"{self.nombre}: {self.institucion}: {self._categoria}: "+":".join(str(self._puntajes.get(c, 0)) for c in BandaEscolar._criterios_evaluacion)
         else:
             return f"{self.nombre}: {self.institucion}: {self._categoria}"
-
 class Concurso:
     def __init__(self, nombre, fecha, archivo = "banda.txt"):
         self.nombre = nombre
@@ -69,7 +65,7 @@ class Concurso:
 
     def cargar_bandas(self):
         try:
-            with open(self.archivo, "r", encodig="udf-8") as f:
+            with open(self.archivo, "r", encoding="udf-8") as f:
                 for liena in f:
                     linea = linea.strip()
                     if not linea:
@@ -83,20 +79,14 @@ class Concurso:
                     banda = BandaEscolar(nombre, institucion, categoria)
                     if len(partes) >= 8:
                         try:
-                            ritmo = int(partes[3])
-                            uniformidad = int(partes[4])
-                            coreografia = int(partes[5])
-                            alineacion = int(partes[6])
-                            puntualidad = int(partes[7])
                             puntajes = {
-                                "ritmo": ritmo,
-                                "uniformidad": uniformidad,
-                                "coreografia": coreografia,
-                                "alineacion": alineacion,
-                                "puntualidad": puntualidad,
+                                "ritmo": int(partes[3]),
+                                "uniformidad": int(partes[4]),
+                                "coreografia": int(partes[5]),
+                                "alineacion": int(partes[6]),
+                                "puntualidad": int(partes[7]),
                             }
-
-                            banda.registrar_puntaje(puntajes)
+                            banda.registrar_puntajes(puntajes)
                         except ValueError:
                             print(f"Puntaje inválido en línea:{linea}")
                     self.bandas[nombre] = banda
@@ -123,6 +113,7 @@ class Concurso:
        self.bandas[banda.nombre] = banda
        self.cargar_bandas()
        print(f"Banda {banda.nombre} inscrito correctamente.")
+       return True
 
     def registrar_evaluacion(self, nombre_banda, puntajes):
         if nombre_banda not in self.bandas:
@@ -133,6 +124,7 @@ class Concurso:
             self.guardar_bandas()
             print(f"Evaluación registrada para '{nombre_banda}'.")
             return si
+        return False
 
     def listar_bandas(self):
         print(f"Listado de Bandas - {self.nombre} ({self.fecha})")
@@ -171,6 +163,54 @@ def pedir_entero(mensaje):
         except ValueError:
             print("Ingrese un número entero.")
 
+class ConcursoBandaApp:
+    def __init__(self):
+        self.ventana =tk.Tk()
+        self.ventana.title("Concurso de bandas - Quetzaltenango")
+        self.ventana.geometry("800x600")
+
+        self.menu()
+
+        tk.label(
+            self.ventana,
+            text="Sistema de insctripcion y evaluacion de Bandas Escolares\nConcurso 14 de Septiembre - Quetzaltenango",
+            font=("Arial", 20, "bold"),
+            justify="center"
+        ).pack(pady=50)
+
+        self.ventana.mainloop()
+
+    def menu(self):
+        barra = tk.Menu(self.ventana)
+        opciones = tk.Menu(barra, tearoff=0)
+        opciones.add_command(label="Inscribir Banda", command=self.inscribir_banda)
+        opciones.add_command(label="Registrar Evaluación", commando=self.registrar_evaluacion)
+        opciones.add_command(label="Listar Bandas", command=self.listar_bandas)
+        opciones.add_command(label="Ver Ranking", command=self.ver_ranking)
+        opciones.add_separator()
+        opciones.add_command(label="Ventana de Saludo", command=self.ventana_saludo)
+        opciones.add_separator()
+        opciones.add_command(label="Salir", command=self.ventana.quit)
+        barra.add_cascade(label="Opciones", menu=opciones)
+        self.ventana.config(menu=barra)
+
+    def inscribir_banda(self):
+        print("Se abrió la ventana: Inscribir Banda")
+        tk.Toplevel(self.ventana).title("Inscribir Banda")
+
+    def registrar_evaluacion(self):
+        print("Se abrió la ventana: Registrar Evaluacion")
+        tk.Toplevel(self.ventana).title("Evaluación")
+
+    def listar_bandas(self):
+        print("Se abrió la ventana: Listado de Bandas ")
+        tk.Toplevel(self.ventana).title("Listado de Bandas")
+
+    def ver_ranking(self):
+        print("Se abri la ventana: Clasificación Final")
+        tk.Toplevel(self.ventana).title("Clasificación Final")
+
+
 def menu():
     concurso = Concurso("Concurso de Bandas - 15 de Septiembre", "15-09-2025")
 
@@ -195,13 +235,8 @@ def menu():
             nombre = input("Nombre de la banda a evaluar: ").strip()
             puntajes = {}
             print("Ingrese puntajes (o a 10)")
-            criterios = ["ritmo", "uniformidad", "coreografía", "alineación", "puntualidad"]
-            i = 0
-            while i < len(criterios):
-                c= criterios[i]
-                n = pedir_entero(f"{c.capitalize()}: ")
-                puntajes[c] = n
-                i += 1
+            for criterio in BandaEscolar._criterios_evaluacion:
+                puntajes[criterio] = pedir_entero(f"{criterio}: ")
             concurso.registrar_evaluacion(nombre, puntajes)
 
         elif opcion == "3":
