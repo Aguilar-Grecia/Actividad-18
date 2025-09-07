@@ -26,7 +26,7 @@ class BandaEscolar(Participante):
         return True
 
     def registrar_puntajes(self, puntajes):
-        for criterio in BandaEscolar._criterios:
+        for criterio in BandaEscolar._criterios_evaluacion:
             if criterio not in puntajes:
                 print(f"Falta criterio: {criterio}")
                 return False
@@ -40,12 +40,10 @@ class BandaEscolar(Participante):
         return sum(self._puntajes.values()) if self._puntajes else 0
 
     def promedio(self):
-        if not self._puntajes:
-            return 0
-        return self.total / 5
+        return self.total / len(self._criterios_evaluacion) if self.puntajes else 0
 
     def mostrar_info(self):
-        info = f"Banda: {self.nombre} | Instituación: {self.institucion} | Categoría: {self._categoria} "
+        info = super().mostrar_info() + f" | Categoría: {self._categoria} "
         if self._puntajes:
             info  += f" | Total: {self.total}"
         return info
@@ -73,10 +71,8 @@ class Concurso:
                     partes = linea.split(":")
                     if len(partes) < 3:
                         continue
-                    nombre = partes[0]
-                    institucion = partes[1]
-                    categoria = partes[2]
-                    banda = BandaEscolar(nombre, institucion, categoria)
+                    nombre, institucion, carga = partes[0:3]
+                    banda = BandaEscolar(nombre, institucion)
                     if len(partes) >= 8:
                         try:
                             puntajes = {
@@ -84,7 +80,7 @@ class Concurso:
                                 "uniformidad": int(partes[4]),
                                 "coreografia": int(partes[5]),
                                 "alineacion": int(partes[6]),
-                                "puntualidad": int(partes[7]),
+                                "puntualidad": int(partes[7])
                             }
                             banda.registrar_puntajes(puntajes)
                         except ValueError:
@@ -98,7 +94,7 @@ class Concurso:
         try:
             with open(self.archivo, "w", encoding="utf-8") as f:
                 for banda in self.bandas.values():
-                    f.write(banda.a_linea_archivo() + "\n")
+                    f.write(banda.linea_archivo() + "\n")
             print(f"Datos gurdados en {self.archivos}")
         except Exception as e:
             print(f"No se puede guardar el archivo:{e}")
@@ -169,30 +165,25 @@ class ConcursoBandaApp:
         self.ventana.title("Concurso de bandas - Quetzaltenango")
         self.ventana.geometry("800x600")
 
-        self.menu()
-
-        tk.label(
+        tk.Label(
             self.ventana,
             text="Sistema de insctripcion y evaluacion de Bandas Escolares\nConcurso 14 de Septiembre - Quetzaltenango",
             font=("Arial", 20, "bold"),
             justify="center"
         ).pack(pady=50)
 
-        self.ventana.mainloop()
+        boton_inscribir_banda = tk.Button(self.ventana, text="Inscribir Banda", command=self.inscribir_banda)
+        boton_inscribir_banda.pack(pady=5)
+        boton_registrar_evaluacion = tk.Button(self.ventana, text="Registrar Evaluacion", command=self.registrar_evaluacion)
+        boton_registrar_evaluacion.pack(pady=5)
+        boton_listar_bandas = tk.Button(self.ventana, text="Listar Bandas", command=self.listar_bandas)
+        boton_listar_bandas.pack(pady=5)
+        boton_ver_ranking = tk.Button(self.ventana, text="Ver Ranking", command=self.ver_ranking)
+        boton_ver_ranking.pack(pady=5)
+        boton_salir = tk.Button(self.ventana, text="Salir", command=self.ventana.quit)
+        boton_salir.pack(pady=5)
 
-    def menu(self):
-        barra = tk.Menu(self.ventana)
-        opciones = tk.Menu(barra, tearoff=0)
-        opciones.add_command(label="Inscribir Banda", command=self.inscribir_banda)
-        opciones.add_command(label="Registrar Evaluación", commando=self.registrar_evaluacion)
-        opciones.add_command(label="Listar Bandas", command=self.listar_bandas)
-        opciones.add_command(label="Ver Ranking", command=self.ver_ranking)
-        opciones.add_separator()
-        opciones.add_command(label="Ventana de Saludo", command=self.ventana_saludo)
-        opciones.add_separator()
-        opciones.add_command(label="Salir", command=self.ventana.quit)
-        barra.add_cascade(label="Opciones", menu=opciones)
-        self.ventana.config(menu=barra)
+        self.ventana.mainloop()
 
     def inscribir_banda(self):
         print("Se abrió la ventana: Inscribir Banda")
@@ -209,7 +200,6 @@ class ConcursoBandaApp:
     def ver_ranking(self):
         print("Se abri la ventana: Clasificación Final")
         tk.Toplevel(self.ventana).title("Clasificación Final")
-
 
 def menu():
     concurso = Concurso("Concurso de Bandas - 15 de Septiembre", "15-09-2025")
@@ -256,4 +246,4 @@ def menu():
             print("Opción inválida.")
 
 if __name__ == "__main__":
-    menu()
+    ConcursoBandaApp()
