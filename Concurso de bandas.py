@@ -83,38 +83,62 @@ class Concurso:
                     banda = BandaEscolar(nombre, institucion, categoria)
                     if len(partes) >= 8:
                         try:
-                            rimtmo = int(partes[3])
+                            ritmo = int(partes[3])
                             uniformidad = int(partes[4])
                             coreografia = int(partes[5])
                             alineacion = int(partes[6])
                             puntualidad = int(partes[7])
-                            puntajes = (
+                            puntajes = {
                                 "ritmo": ritmo,
                                 "uniformidad": uniformidad,
                                 "coreografia": coreografia,
                                 "alineacion": alineacion,
                                 "puntualidad": puntualidad,
-                            )
+                            }
+
                             banda.registrar_puntaje(puntajes)
                         except ValueError:
+                            print(f"Puntaje inválido en línea:{linea}")
+                    self.bandas[nombre] = banda
+            print (f"Bandas importandas desde {self.archivo}")
+        except FileNotFoundError:
+            print(f"No existe el archibo {self.archivo}. Se creará al guardar.")
 
-
+    def guardar_bandas(self):
+        try:
+            with open(self.archivo, "w", encoding="utf-8") as f:
+                for banda in self.bandas.values():
+                    f.write(banda.a_linea_archivo() + "\n")
+            print(f"Datos gurdados en {self.archivos}")
+        except Exception as e:
+            print(f"No se puede guardar el archivo:{e}")
 
     def inscribir_banda(self, banda: BandaEscolar):
-        if banda.nombre in self.bandas:
-            print(f"Ya existe una banda con el nombre {banda.nombre}")
-            return False
-        self.bandas[banda.nombre] = banda
-        return True
+       if banda._categoria is None:
+           print("No se puede inscrivir: Categoria inválida.")
+           return False
+       if banda.nombre in self.bandas:
+           print(f"Ya existe una banda con el nombre '{banda.nombre}'.")
+           return False
+       self.bandas[banda.nombre] = banda
+       self.cargar_bandas()
+       print(f"Banda {banda.nombre} inscrito correctamente.")
 
-    def registrar_evaluacion(self, nombre_banda, puntaje):
+    def registrar_evaluacion(self, nombre_banda, puntajes):
         if nombre_banda not in self.bandas:
             print(f" No existe la banda {nombre_banda}")
             return False
-        return self.bandas[nombre_banda].registrar_puntajes(puntaje)
+        si = self.bandas[nombre_banda].registrar_puntajes(puntajes)
+        if si:
+            self.guardar_bandas()
+            print(f"Evaluación registrada para '{nombre_banda}'.")
+            return si
 
     def listar_bandas(self):
         print(f"Listado de Bandas - {self.nombre} ({self.fecha})")
+        if not self.bandas:
+            print("No hay ninguna banda registrada.")
+            return
         for banda in self.bandas.values():
             print(" -", banda.mostrar_info())
 
@@ -129,10 +153,72 @@ class Concurso:
                     mayor = banda
             resultado.append(mayor)
             lista.remove(mayor)
-
-        print(f" Ranking Final")
+        print(f"Ranking Final - {self.nombre} ({self.fecha})")
+        if not resultado:
+            print("Sin bandas")
+            return
         posicion = 1
         for banda in resultado:
             print(f"{posicion}. {banda.nombre} ({banda.intitucion}) - {banda._categoria} -> Total: {banda.total}")
             posicion += 1
 
+def pedir_entero(mensaje):
+    while True:
+        valor = input(mensaje)
+        try:
+            n = int(valor)
+            return n
+        except ValueError:
+            print("Ingrese un número entero.")
+
+def menu():
+    concurso = Concurso("Concurso de Bandas - 15 de Septiembre", "15-09-2025")
+
+    while True:
+        print("\n----MENÚ DE CONCURSO DE BANDAS----")
+        print("1. Inscribir Banda")
+        print("2. Registrar Evaluacion")
+        print("3. Listar Bandas")
+        print("4. Ver ranking final")
+        print("5. Guardar en archivo")
+        print("6. Salir")
+        opcion = input("Seleccione una opción: ")
+
+        if opcion == "1":
+            nombre = input("Nombre de la bandas: ").strip()
+            institucion = input("Institución: ").strip()
+            categoria = input("Categoria (Primaria/Básico/Diversificado: ").strip()
+            banda = BandaEscolar(nombre, institucion, categoria)
+            concurso.inscribir_banda(banda)
+
+        elif opcion == "2":
+            nombre = input("Nombre de la banda a evaluar: ").strip()
+            puntajes = {}
+            print("Ingrese puntajes (o a 10)")
+            criterios = ["ritmo", "uniformidad", "coreografía", "alineación", "puntualidad"]
+            i = 0
+            while i < len(criterios):
+                c= criterios[i]
+                n = pedir_entero(f"{c.capitalize()}: ")
+                puntajes[c] = n
+                i += 1
+            concurso.registrar_evaluacion(nombre, puntajes)
+
+        elif opcion == "3":
+            concurso.listar_bandas()
+
+        elif opcion == "4":
+            concurso.ranking()
+
+        elif opcion == "5":
+            concurso.guardar_bandas()
+
+        elif opcion == "6":
+            print("Saliendo... ¡Gracias por participar!")
+            break
+
+        else:
+            print("Opción inválida.")
+
+if __name__ == "__main__":
+    menu()
