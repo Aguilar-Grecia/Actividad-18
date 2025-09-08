@@ -15,235 +15,207 @@ class BandaEscolar(Participante):
     def __init__(self, nombre, institucion, categoria):
         super().__init__(nombre, institucion)
         self._categoria = None
-        self._puntajes = {}
         self.set_categoria(categoria)
+        self._puntajes = {}
 
     def set_categoria(self, categoria):
-        if categoria not in BandaEscolar._categorias_validas:
-            print(f"Categoria Inválida: {categoria}. Categorías inválidas: {BandaEscolar._categorias_validas}")
-            return False
-        self._categoria = categoria
-        return True
+        if categoria in BandaEscolar._categorias_validas:
+            self._categoria = categoria
 
     def registrar_puntajes(self, puntajes):
         for criterio in BandaEscolar._criterios_evaluacion:
             if criterio not in puntajes:
-                print(f"Falta criterio: {criterio}")
-                return False
+                return False, f"Falta critero:{criterio}"
             if not (0 <= puntajes[criterio] <= 10):
-                print(f" Puntaje inválido en {criterio}: {puntajes[criterio]} (0-10)")
-                return False
+                return False, f"Puntaje inválido en {criterio}: {puntajes[criterio]}"
         self._puntajes = puntajes
-        return True
+        return True, "Evaluación  registrado correctamente."
 
     def total(self):
         return sum(self._puntajes.values()) if self._puntajes else 0
 
     def promedio(self):
-        return self.total / len(self._criterios_evaluacion) if self.puntajes else 0
+        return self.total() / len(BandaEscolar._criterios_evaluacion) if self._puntajes else 0
 
     def mostrar_info(self):
-        info = super().mostrar_info() + f" | Categoría: {self._categoria} "
+        info = f"{self.nombre} - {self.institucion} - Categoría: {self._categoria}"
         if self._puntajes:
-            info  += f" | Total: {self.total}"
+            info  += f" | Total: {self.total} | {self.promedio: 1f}"
         return info
 
-    def linea_archivo(self):
-        if self._puntajes:
-            return f"{self.nombre}: {self.institucion}: {self._categoria}: "+":".join(str(self._puntajes.get(c, 0)) for c in BandaEscolar._criterios_evaluacion)
-        else:
-            return f"{self.nombre}: {self.institucion}: {self._categoria}"
 class Concurso:
-    def __init__(self, nombre, fecha, archivo = "banda.txt"):
+    def __init__(self, nombre, fecha):
         self.nombre = nombre
         self.fecha = fecha
-        self.archivo = archivo
         self.bandas = {}
-        self.cargar_bandas()
 
-    def cargar_bandas(self):
-        try:
-            with open(self.archivo, "r", encoding="udf-8") as f:
-                for liena in f:
-                    linea = linea.strip()
-                    if not linea:
-                        continue
-                    partes = linea.split(":")
-                    if len(partes) < 3:
-                        continue
-                    nombre, institucion, carga = partes[0:3]
-                    banda = BandaEscolar(nombre, institucion)
-                    if len(partes) >= 8:
-                        try:
-                            puntajes = {
-                                "ritmo": int(partes[3]),
-                                "uniformidad": int(partes[4]),
-                                "coreografia": int(partes[5]),
-                                "alineacion": int(partes[6]),
-                                "puntualidad": int(partes[7])
-                            }
-                            banda.registrar_puntajes(puntajes)
-                        except ValueError:
-                            print(f"Puntaje inválido en línea:{linea}")
-                    self.bandas[nombre] = banda
-            print (f"Bandas importandas desde {self.archivo}")
-        except FileNotFoundError:
-            print(f"No existe el archibo {self.archivo}. Se creará al guardar.")
-
-    def guardar_bandas(self):
-        try:
-            with open(self.archivo, "w", encoding="utf-8") as f:
-                for banda in self.bandas.values():
-                    f.write(banda.linea_archivo() + "\n")
-            print(f"Datos gurdados en {self.archivos}")
-        except Exception as e:
-            print(f"No se puede guardar el archivo:{e}")
-
-    def inscribir_banda(self, banda: BandaEscolar):
-       if banda._categoria is None:
-           print("No se puede inscrivir: Categoria inválida.")
-           return False
+    def inscribir_banda(self, banda):
        if banda.nombre in self.bandas:
-           print(f"Ya existe una banda con el nombre '{banda.nombre}'.")
-           return False
+           return False, "Ya existe una banda con ese nombre."
        self.bandas[banda.nombre] = banda
-       self.cargar_bandas()
-       print(f"Banda {banda.nombre} inscrito correctamente.")
-       return True
+       return True, f"Banda {banda.nombre} inscrita correctamente."
 
     def registrar_evaluacion(self, nombre_banda, puntajes):
         if nombre_banda not in self.bandas:
             print(f" No existe la banda {nombre_banda}")
             return False
-        si = self.bandas[nombre_banda].registrar_puntajes(puntajes)
-        if si:
-            self.guardar_bandas()
-            print(f"Evaluación registrada para '{nombre_banda}'.")
-            return si
-        return False
+        return self.bandas[nombre_banda].registrar_puntajes(puntajes)
 
     def listar_bandas(self):
-        print(f"Listado de Bandas - {self.nombre} ({self.fecha})")
-        if not self.bandas:
-            print("No hay ninguna banda registrada.")
-            return
-        for banda in self.bandas.values():
-            print(" -", banda.mostrar_info())
+        return [banda.mostrar_info() for banda in self.bandas.values()]
 
     def ranking(self):
-        lista = list(self.bandas.values())
-        resultado = []
+        bandas_ordenadas = sorted(
+            self.bandas.values(), key=lambda b: (b.total, b.promedio), reverse=True)
+        return bandas_ordenadas [:3]
 
-        while lista:
-            mayor = lista [0]
-            for banda in lista:
-                if banda.total > mayor.total:
-                    mayor = banda
-            resultado.append(mayor)
-            lista.remove(mayor)
-        print(f"Ranking Final - {self.nombre} ({self.fecha})")
-        if not resultado:
-            print("Sin bandas")
-            return
-        posicion = 1
-        for banda in resultado:
-            print(f"{posicion}. {banda.nombre} ({banda.intitucion}) - {banda._categoria} -> Total: {banda.total}")
-            posicion += 1
+    def guardar_resultados(self, archivo = "bandas.txt"):
+            with open(archivo, "w", encoding="utf-8") as f:
+                f.write(f"{self.nombre} - {self.fecha}\n")
+                f.write("Bandas Inscritos:\n")
+                for banda in self.bandas.values():
+                    f.write(f"{banda.mostrar_info()}\n")
 
-def pedir_entero(mensaje):
-    while True:
-        valor = input(mensaje)
-        try:
-            n = int(valor)
-            return n
-        except ValueError:
-            print("Ingrese un número entero.")
+                f.write("Ranking:\n")
+                for i, banda in enumerate(self.ranking(), start=1):
+                    f.write(f"{i}. {banda.nombre} - {banda.total} puntos\n")
+            return f"Resultados guardados en {archivo}"
 
-class ConcursoBandaApp:
-    def __init__(self):
-        self.ventana =tk.Tk()
-        self.ventana.title("Concurso de bandas - Quetzaltenango")
-        self.ventana.geometry("800x600")
+class ConcursoBanda:
+    def __init__(self, ventana):
+        self.ventana = ventana
+        self.ventana.title("Concurso de bandas")
+        self.ventana.geometry("800x500")
 
-        tk.Label(
-            self.ventana,
-            text="Sistema de insctripcion y evaluacion de Bandas Escolares\nConcurso 14 de Septiembre - Quetzaltenango",
-            font=("Arial", 20, "bold"),
-            justify="center"
-        ).pack(pady=50)
+        self.concurso = Concurso("Concurso de bandas - 15 de Septiembre", "2025-09-14")
 
         boton_inscribir_banda = tk.Button(self.ventana, text="Inscribir Banda", command=self.inscribir_banda)
         boton_inscribir_banda.pack(pady=5)
+
         boton_registrar_evaluacion = tk.Button(self.ventana, text="Registrar Evaluacion", command=self.registrar_evaluacion)
         boton_registrar_evaluacion.pack(pady=5)
+
         boton_listar_bandas = tk.Button(self.ventana, text="Listar Bandas", command=self.listar_bandas)
         boton_listar_bandas.pack(pady=5)
+
         boton_ver_ranking = tk.Button(self.ventana, text="Ver Ranking", command=self.ver_ranking)
         boton_ver_ranking.pack(pady=5)
+
         boton_salir = tk.Button(self.ventana, text="Salir", command=self.ventana.quit)
         boton_salir.pack(pady=5)
 
-        self.ventana.mainloop()
-
     def inscribir_banda(self):
-        print("Se abrió la ventana: Inscribir Banda")
-        tk.Toplevel(self.ventana).title("Inscribir Banda")
+        ventana_form = tk.Toplevel(self.ventana)
+        ventana_form.title("Inscribir Banda")
+        ventana_form.geometry("600x500")
+
+
+        tk.Label(ventana_form, text="Nombre de la Banda:").pack(pady=5)
+        entry_nombre=tk.Entry(ventana_form)
+        entry_nombre.pack(pady=5)
+
+        tk.Label(ventana_form, text="Institución:").pack(pady=5)
+        entry_institucion = tk.Entry(ventana_form)
+        entry_institucion.pack(pady=5)
+
+        tk.Label(ventana_form, text="Categoria (Primaria/Básico/Diversificado: ").pack(pady=5)
+        entry_categoria = tk.Entry(ventana_form)
+        entry_categoria.pack(pady=5)
+
+        def guardar():
+            nombre = entry_nombre.get().strip()
+            institucion = entry_institucion.get().strip()
+            categoria = entry_categoria.get().strip()
+
+            if not nombre or not institucion or not categoria:
+                tk.Label(ventana_form, text="Todos los campos son obligatorios:").pack(pady=5)
+                return
+
+            try:
+                banda = BandaEscolar(nombre, institucion, categoria)
+                ok, mensaje = self.concurso.inscribir_banda(banda)
+                tk.Label(ventana_form, text=mensaje).pack(pady=5)
+                if ok:
+                    ventana_form.destroy()
+            except ValueError as e:
+                tk.Label(ventana_form, text=str(e)).pack(pady=5)
+
+        tk.Button(ventana_form, text="Guardar", command=guardar).pack(pady=5)
 
     def registrar_evaluacion(self):
-        print("Se abrió la ventana: Registrar Evaluacion")
-        tk.Toplevel(self.ventana).title("Evaluación")
+        ventana_evalua = tk.Toplevel(self.ventana)
+        ventana_evalua.title("Registrar Evaluacion")
+        ventana_evalua.geometry("600x500")
+
+        nombres_bandas= list(self.concurso.bandas.keys())
+        if not nombres_bandas:
+            tk.Label(ventana_evalua, text="No hay bandas registradas para evaluar ").pack(pady=5)
+            return
+
+        tk.Label(ventana_evalua, text="Seleccione la banda a Evaluar:").pack(pady=5)
+        seleccion = tk.StringVar()
+        seleccion.set(nombres_bandas[0])
+        tk.OptionMenu(ventana_evalua, seleccion, *nombres_bandas).pack(pady=5)
+
+        entradas = {}
+        for criterio in BandaEscolar._criterios_evaluacion:
+            tk.Label(ventana_evalua, text=f"{criterio} (0-10):").pack(pady=5)
+            entry = tk.Entry(ventana_evalua)
+            entry.pack(pady=5)
+            entradas[criterio] = entry
+
+        def guardar_evalua():
+            nombre_banda = seleccion.get()
+            puntajes = {}
+            try:
+                for criterio, entry in entradas.items():
+                    valor = int(entry.get())
+                    if valor <0 or valor >10:
+                        tk.Label(ventana_evalua, text=f"{criterio} fuera de rango").pack()
+                        return
+                    puntajes[criterio] = valor
+            except ValueError:
+                tk.Label(ventana_evalua, text="Los puntajes deben ser números (0-10)").pack()
+                return
+
+            ok, correcto, mensaje = self.concurso.registrar_evaluacion(nombre_banda, puntajes)
+            tk.Label(ventana_evalua, text=mensaje).pack()
+
+            if ok:
+                ventana_evalua.destroy()
+        tk.Button(ventana_evalua, text="Guardar Evaluación", command=guardar_evalua).pack(pady=5)
 
     def listar_bandas(self):
-        print("Se abrió la ventana: Listado de Bandas ")
-        tk.Toplevel(self.ventana).title("Listado de Bandas")
+        ventana_lista = tk.Toplevel(self.ventana)
+        ventana_lista.title("Listado de Bandas")
+        ventana_lista.geometry("600x500")
+
+        bandas = self.concurso.listar_bandas()
+        if not bandas:
+            tk.Label(ventana_lista, text="No hay bandas registradas:").pack(pady=5)
+        else:
+            for info in bandas:
+                tk.Label(ventana_lista, text=info).pack(pady=5)
 
     def ver_ranking(self):
-        print("Se abri la ventana: Clasificación Final")
-        tk.Toplevel(self.ventana).title("Clasificación Final")
+        ventana_ranking = tk.Toplevel(self.ventana)
+        ventana_ranking.title("Clasificación Final")
+        ventana_ranking.geometry("600x500")
 
-def menu():
-    concurso = Concurso("Concurso de Bandas - 15 de Septiembre", "15-09-2025")
-
-    while True:
-        print("\n----MENÚ DE CONCURSO DE BANDAS----")
-        print("1. Inscribir Banda")
-        print("2. Registrar Evaluacion")
-        print("3. Listar Bandas")
-        print("4. Ver ranking final")
-        print("5. Guardar en archivo")
-        print("6. Salir")
-        opcion = input("Seleccione una opción: ")
-
-        if opcion == "1":
-            nombre = input("Nombre de la bandas: ").strip()
-            institucion = input("Institución: ").strip()
-            categoria = input("Categoria (Primaria/Básico/Diversificado: ").strip()
-            banda = BandaEscolar(nombre, institucion, categoria)
-            concurso.inscribir_banda(banda)
-
-        elif opcion == "2":
-            nombre = input("Nombre de la banda a evaluar: ").strip()
-            puntajes = {}
-            print("Ingrese puntajes (o a 10)")
-            for criterio in BandaEscolar._criterios_evaluacion:
-                puntajes[criterio] = pedir_entero(f"{criterio}: ")
-            concurso.registrar_evaluacion(nombre, puntajes)
-
-        elif opcion == "3":
-            concurso.listar_bandas()
-
-        elif opcion == "4":
-            concurso.ranking()
-
-        elif opcion == "5":
-            concurso.guardar_bandas()
-
-        elif opcion == "6":
-            print("Saliendo... ¡Gracias por participar!")
-            break
-
+        ranking = self.concurso.ranking()
+        if not ranking:
+            tk.Label(ventana_ranking, text="No hay evaluaciones registraadas").pack(pady=5)
         else:
-            print("Opción inválida.")
+            for i, banda in enumerate(ranking, start=1):
+                tk.Label(ventana_ranking, text=f"{i}. {banda.nombre} ({banda.institucion} - {banda.total} puntos").pack(pady=5)
+
+def guardar_archivo(self):
+    mensaje = self.concurso.guardar_resultados()
+    ventana_msg = tk.Toplevel(self.ventana)
+    ventana_msg.title("Guardar Archivo")
+    tk.Label(ventana_msg, text=mensaje).pack(pady=5)
 
 if __name__ == "__main__":
-    ConcursoBandaApp()
+    root = tk.Tk()
+    app = ConcursoBanda(root)
+    root.mainloop()
