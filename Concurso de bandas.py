@@ -217,7 +217,9 @@ class ConcursoBanda:
         mensaje = self.concurso.guardar_resultados()
         ventana_msg = tk.Toplevel(self.ventana)
         ventana_msg.title("Guardar Archivo")
-        tk.Label(ventana_msg, text=mensaje, font=("georgia", 18, "italic"), fg= "#D9AC2A",bg= "#270101").pack(pady=10)
+        ventana_msg.geometry("500x200")
+        ventana_msg.configure(bg="#270101")
+        tk.Label(ventana_msg, text=mensaje, font=("georgia", 18, "italic"), fg= "#D9AC2A",bg= "#763f02").pack(pady=10)
 
 if __name__ == "__main__":
     root = tk.Tk()
